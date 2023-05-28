@@ -1,18 +1,22 @@
 {
   "name": "sybil-aio",
   "version": "1.0.0",
-  "description": "",
+  "description": " ",
+  "author": "insuline.eth",
+  "license": "ISC",
+  "keywords": [],
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "@types/node": "^20.2.5",
     "dotenv": "^16.0.3",
     "tsc-watch": "^6.0.4",
     "typescript": "^5.0.4"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^0.39.3",
+    "eslint": "^8.41.0"
   }
 }
