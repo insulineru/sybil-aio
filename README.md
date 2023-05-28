@@ -3,16 +3,16 @@
 Inspired by https://github.com/zaivanza/all-in-one-v2
 
 ## Todo
-[ ] Web3-checker
-[ ] Debank-checker
-[ ] Exchange withdraw
-[ ] Okx withdraw
-[ ] Transfer
-[ ] 1inch
-[ ] Orbiter
-[ ] Woofi bridge
-[ ] Woofi swap
-[ ] Sushiswap
+- [ ] Web3-checker
+- [ ] Debank-checker
+- [ ] Exchange withdraw
+- [ ] Okx withdraw
+- [ ] Transfer
+- [ ] 1inch
+- [ ] Orbiter
+- [ ] Woofi bridge
+- [ ] Woofi swap
+- [ ] Sushiswap
 
 Идеальный скрипт-V2 для ведения фермы. Освоив его, ты сможешь (идет перечисление модулей) :
 
