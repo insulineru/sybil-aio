@@ -12,8 +12,10 @@
   "dependencies": {
     "@types/node": "^20.2.5",
     "dotenv": "^16.0.3",
+    "got": "^13.0.0",
     "tsc-watch": "^6.0.4",
-    "typescript": "^5.0.4"
+    "typescript": "^5.0.4",
+    "viem": "^0.3.37"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^0.39.3",
