@@ -1,8 +1,27 @@
 import type { Address } from 'viem'
-import type { Chains } from '../data/constants'
+import type { Chains } from '../data/constants.js'
 
 type Web3CheckerTokens = {
   [key in Chains]?: Array<Address | ''>
+}
+
+interface Web3ChekerTokenInfo {
+  [key: string]: {
+    [key: string]: {
+      symbol: string
+      decimals: number
+      address: Address
+      price?: number
+    }
+  }
+}
+
+interface Web3CheckerTokensResult {
+  [wallet: string]: {
+    [chain in Chains]?: {
+      [token: string]: bigint
+    }
+  }
 }
 
 interface Web3CheckerAlert {
@@ -27,4 +46,4 @@ interface Web3CheckerParameters {
   // isCheckGweiEnabled: boolean
 }
 
-export type { Web3CheckerTokens, Web3CheckerAlert, Web3CheckerGasAmountLimit, Web3CheckerParameters }
+export type { Web3CheckerTokens, Web3ChekerTokenInfo, Web3CheckerTokensResult, Web3CheckerAlert, Web3CheckerGasAmountLimit, Web3CheckerParameters }

@@ -1,5 +1,5 @@
-import type { Web3CheckerAlert, Web3CheckerParameters, Web3CheckerTokens } from '../models/web3-checker'
-import { Chains } from './constants'
+import type { Web3CheckerAlert, Web3CheckerParameters, Web3CheckerTokens } from '../models/web3-checker.js'
+import { Chains } from './constants.js'
 
 // Модуль будет проверять только токены, указанные в этом объекте.
 const ONCHAIN_BALANCES_TOKENS: Web3CheckerTokens = {

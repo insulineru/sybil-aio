@@ -1,6 +1,6 @@
 import { arbitrum, avalanche, bsc, fantom, mainnet, optimism, polygon, polygonZkEvm, zkSync } from 'viem/chains'
-import type { CexKeys, CexKeysWithPassword } from '../models/cex'
-import type { NetworkConfiguration } from '../models/network'
+import type { CexKeys, CexKeysWithPassword } from '../models/cex.js'
+import type { NetworkConfiguration } from '../models/network.js'
 
 // Токен для работы бота. Получить можно у @BotFather в Telegram.
 const TELEGRAM_BOT_TOKEN = ''
@@ -50,7 +50,7 @@ const NETWORKS: NetworkConfiguration = {
   },
 
   arbitrum: {
-    rpc: 'https://rpc.ankr.com/arbitrum',
+    rpc: 'https://arb1.croswap.com/rpc',
     scan: 'https://arbiscan.io/tx',
     token: 'ETH',
     chain_id: 42161,

@@ -1,8 +1,8 @@
 import type { Chain, Hex, HttpTransport, PrivateKeyAccount, PublicClient, WalletClient } from 'viem'
 import { createPublicClient, createWalletClient, http } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import { NETWORKS } from '../data/config'
-import type { Chains } from '../data/constants'
+import { NETWORKS } from '../data/config.js'
+import type { Chains } from '../data/constants.js'
 
 // TODO: Singleton maybe?
 function getPublicClient({ network }: { network: Chains }): PublicClient {

@@ -1,5 +1,6 @@
 {
   "name": "sybil-aio",
+  "type": "module",
   "version": "1.0.0",
   "description": " ",
   "author": "insuline.eth",

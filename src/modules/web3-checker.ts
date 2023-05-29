@@ -1,19 +1,113 @@
 // Here is a brief technical description of each function in the Python script:
 
-import type { Address } from 'viem'
-import { getEvmWallet } from '../utils/get-evm-wallet'
-import { ERC20_ABI } from '../data/abi'
-import type { Chains } from '../data/constants'
-import { WALLETS } from '../data/wallets'
-import type { Web3CheckerTokens } from '../models/web3-checker'
-import { getPublicClient } from '../utils/get-clients'
-import { ONCHAIN_BALANCES_PARAMETERS } from '../data/settings'
+import type { Address, Hex } from 'viem'
+import { formatUnits } from 'viem'
+import { got } from 'got'
+import { splitArray } from '../utils/split-array.js'
+import { NETWORKS } from '../data/config.js'
+import { getEvmWallet } from '../utils/get-evm-wallet.js'
+import { ERC20_ABI } from '../data/abi.js'
+import type { Chains } from '../data/constants.js'
+import { WALLETS } from '../data/wallets.js'
+import type { Web3CheckerTokens, Web3CheckerTokensResult, Web3ChekerTokenInfo } from '../models/web3-checker.js'
+import { getPublicClient } from '../utils/get-clients.js'
+import { ONCHAIN_BALANCES_PARAMETERS } from '../data/settings.js'
 
-// 1. `evm_wallet(key: str) -> str`: This function accepts a string argument, `key`, which represents an Ethereum wallet key. It attempts to use the `Web3` Python library to convert the key to a wallet address. If unsuccessful, it tries again, up to a maximum of two times. If both attempts fail, it returns the original key.
+async function getTokenInfo(tokens: Web3CheckerTokens): Promise<Web3ChekerTokenInfo> {
+  const chains = Object.keys(tokens) as Chains[]
+  const clients = chains.map(chain => getPublicClient({ network: chain }))
 
-// 2. `round_to(num: float, digits: int = 3) -> float`: This function accepts a float number `num` and an optional integer `digits` (default 3). It calculates the number of digits after the decimal in `num`, and then rounds `num` to the number of decimal places calculated plus `digits` - 1. If the number of decimal places is less than `digits`, it rounds to `digits` decimal places. If any errors occur, it simply returns `num`【7†source】.
+  const symbolParams = {
+    abi: ERC20_ABI,
+    functionName: 'symbol',
+  }
 
-// 3. `get_prices(datas: dict) -> dict`: This function accepts a dictionary `datas` that contains data about different blockchain chains and their corresponding tokens. For each chain and token, it fetches the current price in USDT from the CryptoCompare API, and updates a dictionary `prices` with the token symbol and price. If any errors occur during the price fetch, it logs the error and sets the price for that token to 0【8†source】.
+  const decimalsParams = {
+    abi: ERC20_ABI,
+    functionName: 'decimals',
+  }
+
+  const erc20Requests = clients.map(async (client, index) => {
+    const chain = chains[index]
+    const chainTokens = tokens[chain]?.filter(Boolean) as Address[]
+
+    const contracts = chainTokens.flatMap(token => [
+      {
+        address: token,
+        ...symbolParams,
+      },
+      {
+        address: token,
+        ...decimalsParams,
+      },
+    ])
+
+    return await client.multicall({
+      contracts,
+    })
+  })
+
+  const erc20Results = (await Promise.all(erc20Requests)).map((chainResults, chainIndex) => {
+    const chain = chains[chainIndex]
+    const chainTokens = tokens[chain]?.filter(Boolean) as Address[]
+
+    const chainInfo: any = {}
+    chainResults.flat().forEach((el, index) => {
+      const isSymbol = index % 2 === 0
+      const tokenIndex = Math.floor(index / 2)
+      const tokenAddress = chainTokens[tokenIndex]
+
+      if (!chainInfo[tokenAddress])
+        chainInfo[tokenAddress] = {}
+      if (isSymbol)
+        chainInfo[tokenAddress].symbol = el.result as string
+
+      else
+        chainInfo[tokenAddress].decimals = el.result as number
+    })
+
+    // check and process gas token
+    if (tokens[chain]?.includes('')) {
+      chainInfo[''] = {
+        symbol: NETWORKS[chain].token,
+        decimals: 18,
+      }
+    }
+
+    return { [chain]: chainInfo }
+  })
+
+  const tokenInfo: Web3ChekerTokenInfo = Object.assign({}, ...erc20Results)
+
+  // Fetching prices
+  const uniqueSymbols = new Set<string>()
+  for (const chain of Object.values(tokenInfo)) {
+    for (const token of Object.values(chain))
+      uniqueSymbols.add(token.symbol)
+  }
+
+  const priceRequests = Array.from(uniqueSymbols).map(async (symbol) => {
+    try {
+      const response = await got(`https://min-api.cryptocompare.com/data/price?fsym=${symbol}&tsyms=USDT`).json<{ USDT: number }>()
+      return { [symbol]: response.USDT }
+    }
+    catch (error: any) {
+      console.error(`Failed to fetch price for ${symbol}: ${error.message}`)
+      return { [symbol]: 0 }
+    }
+  })
+
+  const prices = Object.assign({}, ...(await Promise.all(priceRequests)))
+
+  // Adding prices to token info
+  for (const chain of Object.keys(tokenInfo) as Chains[]) {
+    for (const token of Object.keys(tokenInfo[chain]!))
+      tokenInfo[chain]![token].price = prices[tokenInfo![chain]![token].symbol] || 0
+  }
+
+  return tokenInfo
+}
+
 async function getBalances(tokens: Web3CheckerTokens) {
   const chains = Object.keys(tokens) as Chains[]
 
@@ -24,7 +118,7 @@ async function getBalances(tokens: Web3CheckerTokens) {
     functionName: 'balanceOf',
   }
 
-  const requests = clients.map(async (client, index) => {
+  const erc20Requests = clients.map(async (client, index) => {
     const chain = chains[index]
     const chainTokens = tokens[chain]?.filter(Boolean) as Address[]
 
@@ -43,29 +137,116 @@ async function getBalances(tokens: Web3CheckerTokens) {
     })
   })
 
-  const results = await Promise.all(
-    requests,
-  )
+  const erc20Results = (await Promise.all(erc20Requests)).flatMap((result) => {
+    return result.flat().map(el => el.result as bigint)
+  })
 
-  return results.flat()
+  const gasRequests = Object.entries(tokens).map(async ([chain, tokens]) => {
+    if (tokens.includes('')) {
+      const client = getPublicClient({ network: chain as Chains })
+
+      const balances = await Promise.all(
+        WALLETS.map(async (wallet) => {
+          return await client.getBalance({ address: getEvmWallet(wallet) })
+        }),
+      )
+
+      return balances.flat()
+    }
+  }).filter(Boolean)
+
+  const gasResults = await (await Promise.all(gasRequests as Promise<bigint[]>[])).flat()
+
+  return [...erc20Results, ...gasResults]
 }
-// 4. `check_data_token(web3: Web3, token_address: str) -> Tuple`: This asynchronous function accepts a `web3` object and a `token_address` string. It attempts to get the decimal value and symbol of the token at the provided address using the contract ABI. If any errors occur, it waits for 2 seconds and then retries the operation【9†source】.
 
-// 5. `check_balance(web3: Web3, wallet: str, chain: str, address_contract: str) -> Tuple`: This asynchronous function accepts a `web3` object, a `wallet` string, a `chain` string, and an `address_contract` string. It tries to get the balance of the wallet for the token at the provided address on the given chain. It returns the balance in a human-readable format along with the token symbol. If any errors occur, it waits for 1 second and then retries the operation【10†source】.
+function formatResults(walletBalances: bigint[][], wallets: Hex[], tokens: Web3CheckerTokens) {
+  const finalBalances: Web3CheckerTokensResult = {}
+  wallets.forEach((privateKey, walletIndex) => {
+    const wallet = getEvmWallet(privateKey)
+    const walletBalance = walletBalances[walletIndex]
+    let balanceIndex = 0
 
-// 6. `worker(wallet: str, datas: dict) -> None`: This asynchronous function accepts a `wallet` string and a `datas` dictionary. It checks the balance of the wallet for each token on each chain in `datas`, and updates a global `RESULT` dictionary with the wallet, chain, token symbol, and balance【11†source】.
+    for (const chain of Object.keys(tokens) as Chains[]) {
+      if (!finalBalances[wallet])
+        finalBalances[wallet] = {}
 
-// 7. `main(datas: dict, wallets: list) -> None`: This asynchronous function accepts a `datas` dictionary and a `wallets` list. It creates a list of `worker` tasks for each wallet, and then runs all the tasks concurrently using `asyncio.gather()`【12†source】.
+      const chainTokens = tokens[chain]
+      if (chainTokens) {
+        if (!finalBalances[wallet][chain])
+          finalBalances[wallet][chain] = {}
 
-// 8. `send_result(min_balance: dict, file_name: str, prices: dict) -> None`: This function accepts a `min_balance` dictionary, a `file_name` string, and a `prices` dictionary. It calculates the total balance and value in USD for each token in each wallet, and writes the results to a CSV file. It also prints the results to the console, and logs any wallets with a balance lower than `min_balance`【18†source】.
+        for (const token of chainTokens) {
+          if (token) { // if not gas token
+            finalBalances![wallet]![chain]![token] = walletBalance[balanceIndex++]
+          }
+        }
+      }
+    }
 
-// 9. `web3_check() -> None`: This function initiates the process of checking the balances of various wallets on different blockchain chains. It loads the wallets from a
+    for (const chain of Object.keys(tokens) as Chains[]) {
+      if (!finalBalances[wallet])
+        finalBalances[wallet] = {}
 
-// global `WALLETS` variable, converts each wallet key to a wallet address, and initializes the `RESULT` dictionary. It fetches current token prices, runs the `main()` function to check all wallet balances, and then sends the results【18†source】.
+      const chainTokens = tokens[chain]
+      if (chainTokens) {
+        if (!finalBalances[wallet][chain])
+          finalBalances[wallet][chain] = {}
+
+        if (chainTokens.includes(''))
+          finalBalances![wallet]![chain]![''] = walletBalance[balanceIndex++]
+      }
+    }
+  })
+
+  return finalBalances
+}
+
+function printBalancesTable(formattedBalances: Web3CheckerTokensResult, tokenInfo: Web3ChekerTokenInfo) {
+  const table: any[] = []
+  const walletsTotals: Record<string, number> = {}
+
+  for (const [wallet, chains] of Object.entries(formattedBalances)) {
+    let walletTotal = 0
+    for (const [chain, tokens] of Object.entries(chains)) {
+      for (const [token, balance] of Object.entries(tokens)) {
+        const tokenSymbol = tokenInfo[chain][token].symbol
+        const decimals = tokenInfo[chain][token].decimals
+        const price = tokenInfo[chain][token].price
+        const balanceReadable = parseFloat(formatUnits(balance, decimals))
+        const usdValue = balanceReadable * price!
+        walletTotal += usdValue
+
+        table.push({
+          'Wallet': wallet,
+          'Chain': chain,
+          'Token': tokenSymbol,
+          'Balance': balanceReadable,
+          'Value in USD': usdValue,
+        })
+      }
+    }
+
+    walletsTotals[wallet] = walletTotal
+  }
+
+  console.table(table)
+
+  console.log('Total value of each wallet:')
+  for (const [wallet, total] of Object.entries(walletsTotals))
+    console.log(`${wallet}: ${total} USD`)
+}
 
 async function main() {
-  const prices = await getBalances(ONCHAIN_BALANCES_PARAMETERS.tokens)
-  debugger
+  const { tokens } = ONCHAIN_BALANCES_PARAMETERS
+  const allBalances = await getBalances(tokens)
+  const walletBalances = splitArray(allBalances, WALLETS.length)
+
+  const formattedBalances = formatResults(walletBalances, WALLETS, tokens)
+
+  const tokenInfo = await getTokenInfo(tokens)
+
+  printBalancesTable(formattedBalances, tokenInfo)
 }
 
 main()

@@ -1,5 +1,5 @@
 import type { Chain } from 'viem'
-import type { Chains } from '../data/constants'
+import type { Chains } from '../data/constants.js'
 
 type NetworkConfiguration = {
   [key in Chains]: {
