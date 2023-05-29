@@ -22,6 +22,7 @@
   },
   "devDependencies": {
     "@antfu/eslint-config": "^0.39.3",
+    "cli-table3": "^0.6.3",
     "eslint": "^8.41.0"
   }
 }

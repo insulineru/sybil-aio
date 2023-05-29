@@ -1,6 +1,6 @@
 // Here is a brief technical description of each function in the Python script:
-
 import { createWriteStream } from 'node:fs'
+import Table from 'cli-table3'
 import type { Address, Hex } from 'viem'
 import { formatUnits } from 'viem'
 import { got } from 'got'
@@ -270,7 +270,20 @@ function printBalancesTable(formattedBalances: Web3CheckerTokensResult, tokens: 
   csvData = csvData.slice(0, -1) // Remove trailing comma
   csvData += '\n'
 
-  console.log(csvData)
+  // Convert CSV data to table format
+  const lines = csvData.split('\n')
+  const headers = lines[0].split(',')
+  const tableData = lines.slice(1, -1).map(line => line.split(',')) // exclude the last line since it could be empty
+
+  // Transpose the table data
+  const transposedData = headers.map((header, i) => [header, ...tableData.map(row => row[i])])
+
+  // Create a new table and push the transposed data into the table
+  const table = new Table()
+  transposedData.forEach(row => table.push(row))
+
+  // Print the table to the console
+  console.log(table.toString())
 
   // Write data to CSV file
   const csvStream = createWriteStream('balances.csv')
