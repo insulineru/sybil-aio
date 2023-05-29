@@ -1,12 +1,53 @@
 // Here is a brief technical description of each function in the Python script:
 
+import type { Address } from 'viem'
+import { getEvmWallet } from '../utils/get-evm-wallet'
+import { ERC20_ABI } from '../data/abi'
+import type { Chains } from '../data/constants'
+import { WALLETS } from '../data/wallets'
+import type { Web3CheckerTokens } from '../models/web3-checker'
+import { getPublicClient } from '../utils/get-clients'
+import { ONCHAIN_BALANCES_PARAMETERS } from '../data/settings'
+
 // 1. `evm_wallet(key: str) -> str`: This function accepts a string argument, `key`, which represents an Ethereum wallet key. It attempts to use the `Web3` Python library to convert the key to a wallet address. If unsuccessful, it tries again, up to a maximum of two times. If both attempts fail, it returns the original key.
 
 // 2. `round_to(num: float, digits: int = 3) -> float`: This function accepts a float number `num` and an optional integer `digits` (default 3). It calculates the number of digits after the decimal in `num`, and then rounds `num` to the number of decimal places calculated plus `digits` - 1. If the number of decimal places is less than `digits`, it rounds to `digits` decimal places. If any errors occur, it simply returns `num`【7†source】.
 
 // 3. `get_prices(datas: dict) -> dict`: This function accepts a dictionary `datas` that contains data about different blockchain chains and their corresponding tokens. For each chain and token, it fetches the current price in USDT from the CryptoCompare API, and updates a dictionary `prices` with the token symbol and price. If any errors occur during the price fetch, it logs the error and sets the price for that token to 0【8†source】.
-async function getPrices() {
+async function getBalances(tokens: Web3CheckerTokens) {
+  const chains = Object.keys(tokens) as Chains[]
 
+  const clients = chains.map(chain => getPublicClient({ network: chain }))
+
+  const balanceParams = {
+    abi: ERC20_ABI,
+    functionName: 'balanceOf',
+  }
+
+  const requests = clients.map(async (client, index) => {
+    const chain = chains[index]
+    const chainTokens = tokens[chain]?.filter(Boolean) as Address[]
+
+    const contracts = WALLETS.map((wallet) => {
+      return chainTokens.map((token) => {
+        return {
+          address: token,
+          args: [getEvmWallet(wallet)],
+          ...balanceParams,
+        }
+      })
+    }).flat()
+
+    return await client.multicall({
+      contracts,
+    })
+  })
+
+  const results = await Promise.all(
+    requests,
+  )
+
+  return results.flat()
 }
 // 4. `check_data_token(web3: Web3, token_address: str) -> Tuple`: This asynchronous function accepts a `web3` object and a `token_address` string. It attempts to get the decimal value and symbol of the token at the provided address using the contract ABI. If any errors occur, it waits for 2 seconds and then retries the operation【9†source】.
 
@@ -21,3 +62,10 @@ async function getPrices() {
 // 9. `web3_check() -> None`: This function initiates the process of checking the balances of various wallets on different blockchain chains. It loads the wallets from a
 
 // global `WALLETS` variable, converts each wallet key to a wallet address, and initializes the `RESULT` dictionary. It fetches current token prices, runs the `main()` function to check all wallet balances, and then sends the results【18†source】.
+
+async function main() {
+  const prices = await getBalances(ONCHAIN_BALANCES_PARAMETERS.tokens)
+  debugger
+}
+
+main()
