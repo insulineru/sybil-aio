@@ -10,7 +10,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build-ts": "rm -rf ./dist && tsc --skipLibCheck",
-    "distribute:web3-checker": "yarn build-ts && node dist/modules/web3-checker.js"
+    "distribute:web3-checker": "node dist/modules/web3-checker.js"
   },
   "dependencies": {
     "@types/node": "^20.2.5",
