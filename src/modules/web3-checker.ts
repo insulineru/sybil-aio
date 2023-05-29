@@ -1,5 +1,6 @@
 // Here is a brief technical description of each function in the Python script:
 
+import { createWriteStream } from 'node:fs'
 import type { Address, Hex } from 'viem'
 import { formatUnits } from 'viem'
 import { got } from 'got'
@@ -202,39 +203,79 @@ function formatResults(walletBalances: bigint[][], wallets: Hex[], tokens: Web3C
   return finalBalances
 }
 
-function printBalancesTable(formattedBalances: Web3CheckerTokensResult, tokenInfo: Web3ChekerTokenInfo) {
-  const table: any[] = []
-  const walletsTotals: Record<string, number> = {}
+function printBalancesTable(formattedBalances: Web3CheckerTokensResult, tokens: Web3CheckerTokens, tokenInfo: Web3ChekerTokenInfo) {
+  let csvData = 'number,wallet,'
+  const chainsList: Chains[] = []
+  const totalBalances: { [chain: string]: { [token: string]: bigint } } = {}
 
-  for (const [wallet, chains] of Object.entries(formattedBalances)) {
-    let walletTotal = 0
-    for (const [chain, tokens] of Object.entries(chains)) {
-      for (const [token, balance] of Object.entries(tokens)) {
-        const tokenSymbol = tokenInfo[chain][token].symbol
-        const decimals = tokenInfo[chain][token].decimals
-        const price = tokenInfo[chain][token].price
-        const balanceReadable = parseFloat(formatUnits(balance, decimals))
-        const usdValue = balanceReadable * price!
-        walletTotal += usdValue
-
-        table.push({
-          'Wallet': wallet,
-          'Chain': chain,
-          'Token': tokenSymbol,
-          'Balance': balanceReadable,
-          'Value in USD': usdValue,
-        })
-      }
+  for (const chain of Object.keys(tokens) as Chains[]) {
+    chainsList.push(chain)
+    for (const token of tokens[chain]!) {
+      csvData += `${tokenInfo[chain][token].symbol}-${chain},`
+      totalBalances[chain] = totalBalances[chain] || {}
+      totalBalances[chain][token] = BigInt(0) // Initialize total balance
     }
-
-    walletsTotals[wallet] = walletTotal
   }
 
-  console.table(table)
+  csvData = csvData.slice(0, -1) // Remove trailing comma
+  csvData += '\n'
 
-  console.log('Total value of each wallet:')
-  for (const [wallet, total] of Object.entries(walletsTotals))
-    console.log(`${wallet}: ${total} USD`)
+  // Add wallet balances
+  let walletNumber = 1
+  for (const wallet of Object.keys(formattedBalances)) {
+    csvData += `${walletNumber++},${wallet},`
+    for (const chain of chainsList) {
+      for (const token of tokens[chain]!) {
+        const balance = formattedBalances[wallet]![chain]![token]
+        const decimals = tokenInfo[chain][token].decimals
+        const readableBalance = formatUnits(balance, decimals)
+        csvData += `${readableBalance},`
+        totalBalances[chain][token] += balance
+      }
+    }
+    csvData = csvData.slice(0, -1) // Remove trailing comma
+    csvData += '\n'
+  }
+
+  // Add total balances
+  csvData += ',TOTAL,'
+  let totalValueUSD = 0
+  const totalValuesPerTokenUSD: { [token: string]: number } = {}
+  for (const chain of chainsList) {
+    for (const token of tokens[chain]!) {
+      const totalBalance = totalBalances[chain][token]
+      const decimals = tokenInfo[chain][token].decimals
+      const price = tokenInfo[chain][token].price
+      const readableBalance = formatUnits(totalBalance, decimals)
+      csvData += `${readableBalance},`
+      const valueUSD = Number(readableBalance) * price!
+      totalValueUSD += valueUSD
+      const tokenSymbolWithChain = `${tokenInfo[chain][token].symbol}-${chain}`
+      totalValuesPerTokenUSD[tokenSymbolWithChain] = (totalValuesPerTokenUSD[tokenSymbolWithChain] || 0) + valueUSD
+    }
+  }
+  csvData = csvData.slice(0, -1) // Remove trailing comma
+  csvData += '\n'
+
+  // Add total value in USD
+  csvData += `TOTAL_VALUE:,${totalValueUSD.toFixed(2)} $,`
+
+  for (const chain of chainsList) {
+    for (const token of tokens[chain]!) {
+      const tokenValueUSD = totalValuesPerTokenUSD[`${tokenInfo[chain][token].symbol}-${chain}`]
+      csvData += `${tokenValueUSD.toFixed(2)} $,`
+    }
+  }
+
+  csvData = csvData.slice(0, -1) // Remove trailing comma
+  csvData += '\n'
+
+  console.log(csvData)
+
+  // Write data to CSV file
+  const csvStream = createWriteStream('balances.csv')
+  csvStream.write(csvData)
+  csvStream.end()
 }
 
 async function main() {
@@ -246,7 +287,7 @@ async function main() {
 
   const tokenInfo = await getTokenInfo(tokens)
 
-  printBalancesTable(formattedBalances, tokenInfo)
+  printBalancesTable(formattedBalances, tokens, tokenInfo)
 }
 
 main()
