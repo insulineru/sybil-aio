@@ -1,4 +1,6 @@
+import { arbitrum, avalanche, bsc, fantom, mainnet, optimism, polygon, polygonZkEvm, zkSync } from 'viem/chains'
 import type { CexKeys, CexKeysWithPassword } from '../models/cex'
+import type { NetworkConfiguration } from '../models/network'
 
 // Токен для работы бота. Получить можно у @BotFather в Telegram.
 const TELEGRAM_BOT_TOKEN = ''
@@ -6,12 +8,13 @@ const TELEGRAM_BOT_TOKEN = ''
 const TELEGRAM_USER_ID = ''
 
 // Здесь рекомендуется подставить свои значения RPC.
-const NETWORKS = {
+const NETWORKS: NetworkConfiguration = {
   ethereum: {
     rpc: 'https://rpc.ankr.com/eth',
     scan: 'https://etherscan.io/tx',
     token: 'ETH',
     chain_id: 1,
+    viemChain: mainnet,
   },
 
   optimism: {
@@ -19,6 +22,7 @@ const NETWORKS = {
     scan: 'https://optimistic.etherscan.io/tx',
     token: 'ETH',
     chain_id: 10,
+    viemChain: optimism,
   },
 
   bsc: {
@@ -26,6 +30,7 @@ const NETWORKS = {
     scan: 'https://bscscan.com/tx',
     token: 'BNB',
     chain_id: 56,
+    viemChain: bsc,
   },
 
   polygon: {
@@ -33,13 +38,15 @@ const NETWORKS = {
     scan: 'https://polygonscan.com/tx',
     token: 'MATIC',
     chain_id: 137,
+    viemChain: polygon,
   },
 
-  polygon_zkevm: {
+  polygonZkEvm: {
     rpc: 'https://zkevm-rpc.com',
     scan: 'https://zkevm.polygonscan.com/tx',
     token: 'ETH',
     chain_id: 1101,
+    viemChain: polygonZkEvm,
   },
 
   arbitrum: {
@@ -47,6 +54,7 @@ const NETWORKS = {
     scan: 'https://arbiscan.io/tx',
     token: 'ETH',
     chain_id: 42161,
+    viemChain: arbitrum,
   },
 
   avalanche: {
@@ -54,6 +62,7 @@ const NETWORKS = {
     scan: 'https://snowtrace.io/tx',
     token: 'AVAX',
     chain_id: 43114,
+    viemChain: avalanche,
   },
 
   fantom: {
@@ -61,6 +70,7 @@ const NETWORKS = {
     scan: 'https://ftmscan.com/tx',
     token: 'FTM',
     chain_id: 250,
+    viemChain: fantom,
   },
 
   nova: {
@@ -68,6 +78,7 @@ const NETWORKS = {
     scan: 'https://nova.arbiscan.io/tx',
     token: 'ETH',
     chain_id: 42170,
+    viemChain: undefined, // TODO: Add nova chain
   },
 
   zksync: {
@@ -75,6 +86,7 @@ const NETWORKS = {
     scan: 'https://explorer.zksync.io/tx',
     token: 'ETH',
     chain_id: 324,
+    viemChain: zkSync,
   },
 }
 
