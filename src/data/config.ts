@@ -10,7 +10,7 @@ const TELEGRAM_USER_ID = ''
 // Здесь рекомендуется подставить свои значения RPC.
 const NETWORKS: NetworkConfiguration = {
   ethereum: {
-    rpc: 'https://rpc.ankr.com/eth',
+    rpc: 'https://eth.rpc.blxrbdn.com',
     scan: 'https://etherscan.io/tx',
     token: 'ETH',
     chain_id: 1,
@@ -18,7 +18,7 @@ const NETWORKS: NetworkConfiguration = {
   },
 
   optimism: {
-    rpc: 'https://rpc.ankr.com/optimism',
+    rpc: 'https://mainnet.optimism.io',
     scan: 'https://optimistic.etherscan.io/tx',
     token: 'ETH',
     chain_id: 10,
@@ -26,7 +26,7 @@ const NETWORKS: NetworkConfiguration = {
   },
 
   bsc: {
-    rpc: 'https://rpc.ankr.com/bsc',
+    rpc: 'https://bsc-dataseed1.ninicoin.io',
     scan: 'https://bscscan.com/tx',
     token: 'BNB',
     chain_id: 56,
