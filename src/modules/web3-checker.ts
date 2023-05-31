@@ -1,5 +1,7 @@
 // Here is a brief technical description of each function in the Python script:
 import { createWriteStream } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import Table from 'cli-table3'
 import type { Address, Hex } from 'viem'
 import { formatUnits } from 'viem'
@@ -286,7 +288,9 @@ function printBalancesTable(formattedBalances: Web3CheckerTokensResult, tokens: 
   console.log(table.toString())
 
   // Write data to CSV file
-  const csvStream = createWriteStream('balances.csv')
+  const directory = dirname(fileURLToPath(import.meta.url))
+  const path = join(directory, `../../results/${ONCHAIN_BALANCES_PARAMETERS.fileName}.csv}.csv`)
+  const csvStream = createWriteStream(path)
   csvStream.write(csvData)
   csvStream.end()
 }
