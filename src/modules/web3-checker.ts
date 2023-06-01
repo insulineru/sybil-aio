@@ -289,7 +289,7 @@ function printBalancesTable(formattedBalances: Web3CheckerTokensResult, tokens: 
 
   // Write data to CSV file
   const directory = dirname(fileURLToPath(import.meta.url))
-  const path = join(directory, `../../results/${ONCHAIN_BALANCES_PARAMETERS.fileName}.csv}.csv`)
+  const path = join(directory, `../../results/${ONCHAIN_BALANCES_PARAMETERS.fileName}.csv`)
   const csvStream = createWriteStream(path)
   csvStream.write(csvData)
   csvStream.end()
