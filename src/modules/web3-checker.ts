@@ -225,13 +225,15 @@ function printBalancesTable(formattedBalances: Web3CheckerTokensResult, tokens: 
   // Add wallet balances
   let walletNumber = 1
   for (const wallet of Object.keys(formattedBalances)) {
-    csvData += `${walletNumber++},${wallet},`
+    // let shortAddress = wallet.substring(0, 6) + '...' + wallet.substring(address.length - 4);
+    const formattedWallet = `${wallet.substring(0, 6)}...${wallet.substring(wallet.length - 4)}`
+    csvData += `${walletNumber++},${formattedWallet},`
     for (const chain of chainsList) {
       for (const token of tokens[chain]!) {
         const balance = formattedBalances[wallet]![chain]![token]
         const decimals = tokenInfo[chain][token].decimals
         const readableBalance = formatUnits(balance, decimals)
-        csvData += `${readableBalance},`
+        csvData += `${parseFloat(readableBalance).toFixed(4)},`
         totalBalances[chain][token] += balance
       }
     }
@@ -249,7 +251,7 @@ function printBalancesTable(formattedBalances: Web3CheckerTokensResult, tokens: 
       const decimals = tokenInfo[chain][token].decimals
       const price = tokenInfo[chain][token].price
       const readableBalance = formatUnits(totalBalance, decimals)
-      csvData += `${readableBalance},`
+      csvData += `${parseFloat(readableBalance).toFixed(4)},`
       const valueUSD = Number(readableBalance) * price!
       totalValueUSD += valueUSD
       const tokenSymbolWithChain = `${tokenInfo[chain][token].symbol}-${chain}`
