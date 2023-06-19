@@ -3,7 +3,7 @@
 Inspired by https://github.com/zaivanza/all-in-one-v2
 
 ## Todo
-- [ ] Web3-checker
+- [x] Web3-checker
 - [ ] Debank-checker
 - [ ] Exchange withdraw
 - [ ] Okx withdraw
